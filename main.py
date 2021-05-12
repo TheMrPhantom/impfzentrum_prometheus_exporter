@@ -7,10 +7,9 @@ import prometheus_client
 
 plz=["73730","71065","71297","71334","71636"]
 
-zentrumGauge=dict()
-for p in plz:
-    zentrumGauge['impfzentrum_status']=prometheus_client.Gauge(
-        'impfzentrum_status', 'Temp in jrom',['zentrum'])
+metrics=dict()
+
+metrics['impfzentrum_status']=prometheus_client.Gauge('impfzentrum_status', 'Impfstoffverfügbarkeit',['zentrum'])
 
 prometheus_client.start_http_server(8004)
 
@@ -41,7 +40,7 @@ while True:
         print()
 
         for p in plz:
-            zentrumGauge['impfzentrum_status'].labels(zentrum=p).set(outp[p])
+            metrics['impfzentrum_status'].labels(zentrum=p).set(outp[p])
         time.sleep(30)
 
 
