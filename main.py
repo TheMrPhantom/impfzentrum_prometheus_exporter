@@ -45,7 +45,7 @@ while True:
 
         for p in plz:
             metrics['impfzentrum_status'].labels(zentrum=p).set(outp[p])
-        metrics['lasttimechecked'].set(datetime.datetime.now(tz=pytz.utc).timestamp())
+        metrics['lasttimechecked'].set(datetime.datetime.now(tz=pytz.utc).timestamp()*1000)
         time.sleep(60)
 
 
