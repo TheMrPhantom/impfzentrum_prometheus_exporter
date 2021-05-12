@@ -11,7 +11,7 @@ metrics=dict()
 
 metrics['impfzentrum_status']=prometheus_client.Gauge('impfzentrum_status', 'Impfstoffverfügbarkeit',['zentrum'])
 
-prometheus_client.start_http_server(8004)
+prometheus_client.start_http_server(8005)
 
 plz=["73730","71065","71297","71334","71636"]
 outp={}
