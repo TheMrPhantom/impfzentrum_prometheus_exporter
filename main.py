@@ -41,6 +41,6 @@ while True:
 
         for p in plz:
             metrics['impfzentrum_status'].labels(zentrum=p).set(outp[p])
-        time.sleep(30)
+        time.sleep(60)
 
 
