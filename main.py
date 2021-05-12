@@ -1,6 +1,9 @@
 import requests
 import json
 import time
+import datetime
+import pytz
+
 #'{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
 
 import prometheus_client
@@ -10,7 +13,7 @@ plz=["73730","71065","71297","71334","71636"]
 metrics=dict()
 
 metrics['impfzentrum_status']=prometheus_client.Gauge('impfzentrum_status', 'Impfstoffverfügbarkeit',['zentrum'])
-
+metrics['lasttimechecked']=prometheus_client.Gauge('impfzentrum_lastCheck', 'Letze prüfung')
 prometheus_client.start_http_server(8005)
 
 plz=["73730","71065","71297","71334","71636"]
@@ -41,6 +44,7 @@ while True:
 
         for p in plz:
             metrics['impfzentrum_status'].labels(zentrum=p).set(outp[p])
+        metrics['lasttimechecked'].set(datetime.datetime.now(tz=pytz.utc).timestamp())
         time.sleep(60)
 
 
