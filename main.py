@@ -3,6 +3,17 @@ import json
 import time
 #'{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
 
+import prometheus_client
+
+plz=["73730","71065","71297","71334","71636"]
+
+zentrumGauge=dict()
+for p in plz:
+    zentrumGauge['impfzentrum_status']=prometheus_client.Gauge(
+        'impfzentrum_status', 'Temp in jrom',['zentrum'])
+
+prometheus_client.start_http_server(8004)
+
 plz=["73730","71065","71297","71334","71636"]
 outp={}
 while True:
@@ -18,6 +29,7 @@ while True:
                 resp=json.loads(r.text)
                 if r.text=="{}":
                     print("empty")
+                    outp[p]=0
                     continue
                 if resp["termineVorhanden"]:
                     for m in resp["vorhandeneLeistungsmerkmale"]:
@@ -27,6 +39,9 @@ while True:
             
         print(outp)
         print()
+
+        for p in plz:
+            zentrumGauge['impfzentrum_status'].labels(zentrum=p).set(outp[p])
         time.sleep(30)
 
 
