@@ -1,8 +1,8 @@
-import requests
-import json
 import time
 import datetime
 import pytz
+import checker
+import os
 
 #'{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
 
@@ -13,39 +13,20 @@ plz=["73730","71065","71297","71334","71636"]
 metrics=dict()
 
 metrics['impfzentrum_status']=prometheus_client.Gauge('impfzentrum_status', 'Impfstoffverfügbarkeit',['zentrum'])
-metrics['lasttimechecked']=prometheus_client.Gauge('impfzentrum_lastCheck', 'Letze prüfung')
+metrics['lasttimechecked']=prometheus_client.Gauge('impfzentrum_lastCheck', 'Letze prüfung',['zentrum'])
 
-prometheus_client.start_http_server(8005)
+prometheus_client.start_http_server(int(os.environ.get('PORT')))
 
 plz=["73730","71065","71297","71334","71636"]
 outp={}
 while True:
-    for zentrum in range(1,300):
-        for p in plz:
-            session = requests.Session()
-            session.get("https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/impftermine/service?plz="+p,headers={"Referer":"https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/impftermine/service?plz="+p,"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"})
-            r=session.get("https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/rest/suche/termincheck?plz="+p+"&leistungsmerkmale=L920,L921,L922,L923",headers={"Referer":"https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/impftermine/service?plz="+p,"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"})
-            print(r,r.text)
-            if r.status_code != 200:
-                outp[p]=r.status_code
+    for p in plz:
+        result=checker.getVacStatus(p)
+        if result is not None:
+            if not result["termineVorhanden"]:
+                metrics['impfzentrum_status'].labels(zentrum=p).set(0)
             else:
-                resp=json.loads(r.text)
-                if r.text=="{}":
-                    print("empty")
-                    outp[p]=0
-                    continue
-                if resp["termineVorhanden"]:
-                    for m in resp["vorhandeneLeistungsmerkmale"]:
-                        outp[p]=int(resp["vorhandeneLeistungsmerkmale"].replace("L",""))
-                else:
-                    outp[p]=0
-            
-        print(outp)
-        print()
-
-        for p in plz:
-            metrics['impfzentrum_status'].labels(zentrum=p).set(outp[p])
-        metrics['lasttimechecked'].set(datetime.datetime.now(tz=pytz.utc).timestamp()*1000)
-        time.sleep(60)
-
-
+                metrics['impfzentrum_status'].labels(zentrum=p).set(int(str(result["vorhandeneLeistungsmerkmale"][0]).replace("L","")))
+        else:
+            metrics['impfzentrum_status'].labels(zentrum=p).set(429)
+        metrics['lasttimechecked'].labels(zentrum=p).set(datetime.datetime.now(tz=pytz.utc).timestamp()*1000)

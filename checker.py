@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver import ActionChains
 import json
-
+import time
 
 def getVacStatus(center):
     options = Options()
@@ -21,13 +21,16 @@ def getVacStatus(center):
         btn = driver.find_elements_by_xpath(
             "//label[@class='ets-radio-control']")[1]
         ActionChains(driver).move_to_element(btn).click(btn).perform()
-        driver.implicitly_wait(10)
+        time.sleep(10)
         driver.get("https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/rest/suche/termincheck?plz="+str(
             center)+"&leistungsmerkmale=L920,L921,L922,L923")
-        output = json.loads(driver.find_element_by_xpath(
-            "//div[@id='json']").get_attribute("innerHTML"))
-        print(center, output)
-        break
+        try:
+            output = json.loads(driver.find_element_by_xpath(
+                "//div[@id='json']").get_attribute("innerHTML"))
+            print(center, output)
+            break
+        except:
+            continue
 
     driver.quit()
     print("Headless Firefox destructed")
