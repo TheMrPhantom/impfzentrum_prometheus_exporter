@@ -4,18 +4,21 @@ from selenium.webdriver import ActionChains
 import json
 import time
 
+print("Init browser")
+options = Options()
+options.headless = True
+driver = webdriver.Firefox(options=options)
+
+print("Finished...")
 
 def getVacStatus(center):
-    options = Options()
-    options.headless = True
-    driver = webdriver.Firefox(options=options)
+    
 
     url = center["URL"]
     plz = center["PLZ"]
-    print("Headless Firefox Initialized")
     output = None
     special = None
-    for trys in range(1, 20):
+    for trys in range(1, 5):
         driver.get(url+"impftermine/service?plz="+str(plz))
         if ("Virtueller Warteraum des Impfterminservice" in driver.page_source):
             print("warteraum")
@@ -33,7 +36,7 @@ def getVacStatus(center):
             time.sleep(10)
             driver.get(url+"/rest/suche/termincheck?plz="+str(
                 plz)+"&leistungsmerkmale=L920,L921,L922,L923")
-
+                
             page_content = driver.find_element_by_xpath(
                 "//div[@id='json']").get_attribute("innerHTML")
             print("RestLoaded")
@@ -52,6 +55,4 @@ def getVacStatus(center):
                 special = "noservice"
             continue
 
-    driver.quit()
-    print("Headless Firefox destructed")
     return output, special

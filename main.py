@@ -5,8 +5,6 @@ import checker
 import zentren
 import prometheus_client
 # '{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
-# 429 Derzeit keine onlinebuchung
-
 
 class Main:
 
@@ -26,31 +24,13 @@ class Main:
 
         for vac_station in self.vac_stations:
             result, special = checker.getVacStatus(vac_station)
-            station_label = vac_station["PLZ"]+"#" + \
-                vac_station["Ort"]+"166153284"+vac_station["Zentrumsname"]
-            station_label = station_label.strip()
+            station_label = self.get_station_label(vac_station)
+
             if result is not None:
-                if not result["termineVorhanden"]:
-                    self.metrics['impfzentrum_status'].labels(
-                        zentrum=station_label).set(0)
-                else:
-                    self.metrics['impfzentrum_status'].labels(zentrum=station_label).set(
-                        int(str(result["vorhandeneLeistungsmerkmale"][0]).replace("L", "")))
+                self.valid_response(result, station_label)
             else:
-                if special == "warteraum":
-                    self.metrics['impfzentrum_status'].labels(
-                        zentrum=station_label).set(4)
-                elif special == "telefon":
-                    self.metrics['impfzentrum_status'].labels(
-                        zentrum=station_label).set(3)
-                elif special == "noservice":
-                    self.metrics['impfzentrum_status'].labels(
-                        zentrum=station_label).set(2)
-                else:
-                    self.metrics['impfzentrum_status'].labels(
-                        zentrum=station_label).set(1)
-            self.metrics['lasttimechecked'].labels(zentrum=station_label).set(
-                datetime.datetime.now(tz=pytz.utc).timestamp()*1000)
+                self.invalid_response(special, station_label)
+            self.update_time_metric(station_label)
 
     def get_station_label(self, vac_station):
         station_label = vac_station["PLZ"]
@@ -61,3 +41,34 @@ class Main:
         station_label = station_label.strip()
 
         return station_label
+
+    def valid_response(self, result, station_label):
+        if not result["termineVorhanden"]:
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(0)
+        else:
+            self.metrics['impfzentrum_status'].labels(zentrum=station_label).set(
+                int(str(result["vorhandeneLeistungsmerkmale"][0]).replace("L", "")))
+
+    def invalid_response(self, special, station_label):
+        if special == "warteraum":
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(4)
+        elif special == "telefon":
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(3)
+        elif special == "noservice":
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(2)
+        else:
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(1)
+
+    def update_time_metric(self, station_label):
+        self.metrics['lasttimechecked'].labels(zentrum=station_label).set(
+            datetime.datetime.now(tz=pytz.utc).timestamp()*1000)
+
+
+main = Main()
+
+main.check_stations()
