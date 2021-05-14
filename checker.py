@@ -38,11 +38,12 @@ class Checker:
             print(trys, "Juhu")
             try:
                 self.click_on_button()
-                time.sleep(10)
+                
                 page_content = self.check_appointment_page(url,plz)
 
                 if page_content == "{}":
                     print("EmptyPage")
+                    self.driver.delete_all_cookies()
                     continue
                 output = json.loads(page_content)
                 print(plz, output)
