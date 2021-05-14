@@ -1,10 +1,11 @@
-from os import terminal_size
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver import ActionChains
 import json
 import time
 import traceback
+import signal
+import sys
 
 class Checker:
 
@@ -13,7 +14,14 @@ class Checker:
         options = Options()
         options.headless = True
         self.driver = webdriver.Firefox(options=options)
+        signal.signal(signal.SIGINT, self.kill_signal_handler)
         print("Finished...")
+
+    def kill_signal_handler(self, sig, frame):
+        print('SIGINT incoming')
+        self.driver.close()
+        print('SIGINT processed')
+        sys.exit(0)
 
     def getVacStatus(self, center):
 
@@ -31,7 +39,6 @@ class Checker:
             try:
                 self.click_on_button()
                 time.sleep(10)
-
                 page_content = self.check_appointment_page(url,plz)
 
                 if page_content == "{}":
