@@ -1,8 +1,9 @@
 from selenium import webdriver
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver import ActionChains
+from selenium.webdriver import DesiredCapabilities
 import json
-import time
 import traceback
 import signal
 import sys
@@ -11,9 +12,15 @@ class Checker:
 
     def __init__(self):
         print("Init browser")
+        profile=FirefoxProfile()
+        profile.set_preference("dom.webdriver.enabled", False)
+        profile.set_preference('useAutomationExtension', False)
+        profile.update_preferences()
+        desired = DesiredCapabilities.FIREFOX
+
         options = Options()
         options.headless = True
-        self.driver = webdriver.Firefox(options=options)
+        self.driver = webdriver.Firefox(options=options,firefox_profile=profile,desired_capabilities=desired)s
         signal.signal(signal.SIGINT, self.kill_signal_handler)
         print("Finished...")
 
