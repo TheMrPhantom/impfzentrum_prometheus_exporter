@@ -20,7 +20,7 @@ class Checker:
 
         options = Options()
         options.headless = True
-        self.driver = webdriver.Firefox(options=options,firefox_profile=profile,desired_capabilities=desired)s
+        self.driver = webdriver.Firefox(options=options,firefox_profile=profile,desired_capabilities=desired)
         signal.signal(signal.SIGINT, self.kill_signal_handler)
         print("Finished...")
 
