@@ -1,58 +1,101 @@
+from os import terminal_size
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver import ActionChains
 import json
 import time
+import traceback
 
-print("Init browser")
-options = Options()
-options.headless = True
-driver = webdriver.Firefox(options=options)
+class Checker:
 
-print("Finished...")
+    def __init__(self):
+        print("Init browser")
+        options = Options()
+        options.headless = True
+        self.driver = webdriver.Firefox(options=options)
+        print("Finished...")
 
-def getVacStatus(center):
+    def getVacStatus(self, center):
+
+        url = center["URL"]
+        plz = center["PLZ"]
+        output = None
+        special = None
+        for trys in range(1, 5):
+            in_waitingroom, waitingroom_text = self.check_in_waitingroom(
+                url, plz)
+            if in_waitingroom:
+                special = waitingroom_text
+                continue
+            print(trys, "Juhu")
+            try:
+                self.click_on_button()
+                time.sleep(10)
+
+                page_content = self.check_appointment_page(url,plz)
+
+                if page_content == "{}":
+                    print("EmptyPage")
+                    continue
+                output = json.loads(page_content)
+                print(plz, output)
+                break
+            except:
+                self.handle_page_error()
+                continue
+
+        return output, special
+
     
-
-    url = center["URL"]
-    plz = center["PLZ"]
-    output = None
-    special = None
-    for trys in range(1, 5):
-        driver.get(url+"impftermine/service?plz="+str(plz))
-        if ("Virtueller Warteraum des Impfterminservice" in driver.page_source):
+    def check_in_waitingroom(self, url, plz):
+        self.driver.get(url+"impftermine/service?plz="+str(plz))
+        special = None
+        is_waitingroom = False
+        if ("Virtueller Warteraum des Impfterminservice" in self.driver.page_source):
             print("warteraum")
             special = "warteraum"
-            driver.save_screenshot("g.png")
+            is_waitingroom = True
+            self.driver.save_screenshot("g.png")
 
-            continue
-        print(trys, "Juhu")
-        try:
+        return is_waitingroom, special
 
-            btn = driver.find_elements_by_xpath(
-                "//label[@class='ets-radio-control']")[1]
-            ActionChains(driver).move_to_element(btn).click(btn).perform()
-            print("PageLoaded")
-            time.sleep(10)
-            driver.get(url+"/rest/suche/termincheck?plz="+str(
-                plz)+"&leistungsmerkmale=L920,L921,L922,L923")
-                
-            page_content = driver.find_element_by_xpath(
-                "//div[@id='json']").get_attribute("innerHTML")
-            print("RestLoaded")
-            if page_content == "{}":
-                print("EmptyPage")
-                continue
-            output = json.loads(page_content)
-            print(plz, output)
-            break
-        except:
-            print("catched")
-            driver.save_screenshot("fail.png")
-            if "wenden Sie sich bitte telefonisch" in driver.page_source:
-                special = "telefon"
-            if "Derzeit keine Onlinebuchung von Impfterminen" in driver.page_source:
-                special = "noservice"
-            continue
+    def click_on_button(self):
+        for trys in range(5):
+            try:
+                radio_xpath = "//label[@class='ets-radio-control']"
+                btn = self.driver.find_elements_by_xpath(radio_xpath)[1]
+                ActionChains(self.driver).move_to_element(btn).click(btn).perform()
+                break
+            except:
+                pass
 
-    return output, special
+    def check_appointment_page(self, url, plz):
+        termin_url = url
+        termin_url += "/rest/suche/termincheck?plz="
+        termin_url += str(plz)
+        termin_url += "&leistungsmerkmale=L920,L921,L922,L923"
+        self.driver.get(termin_url)
+
+        div_xpath = "//div[@id='json']"
+        content_element = self.driver.find_element_by_xpath(div_xpath)
+        page_content = content_element.get_attribute("innerHTML")
+
+        print("Rest Endpoint Loaded")
+
+        return page_content
+
+    def handle_page_error(self):
+        
+        self.driver.save_screenshot("fail.png")
+        output = None
+        if "wenden Sie sich bitte telefonisch" in self.driver.page_source:
+            output = "telefon"
+            print("Telefon")
+        elif "Derzeit keine Onlinebuchung von Impfterminen" in self.driver.page_source:
+            output = "noservice"
+            print("No_Service")
+        else:
+            traceback.print_exc()
+            print("Error after base page")
+
+        return output

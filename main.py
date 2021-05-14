@@ -1,9 +1,11 @@
 import datetime
 from os import stat
 import pytz
+import time
+import prometheus_client
 import checker
 import zentren
-import prometheus_client
+
 # '{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
 
 class Main:
@@ -17,13 +19,14 @@ class Main:
             'impfzentrum_lastCheck', 'Letze prüfung', ['zentrum'])
 
         self.vac_stations = zentren.getZentren()
+        self.vac_checker=checker.Checker()
 
         prometheus_client.start_http_server(8080)
 
     def check_stations(self):
 
         for vac_station in self.vac_stations:
-            result, special = checker.getVacStatus(vac_station)
+            result, special = self.vac_checker.getVacStatus(vac_station)
             station_label = self.get_station_label(vac_station)
 
             if result is not None:
@@ -70,5 +73,6 @@ class Main:
 
 
 main = Main()
-
-main.check_stations()
+while True:
+    main.check_stations()
+    time.sleep(60)
