@@ -75,4 +75,4 @@ class Main:
 main = Main()
 while True:
     main.check_stations()
-    time.sleep(60)
+    time.sleep(120)
