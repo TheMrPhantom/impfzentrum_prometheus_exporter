@@ -58,7 +58,6 @@ class Checker:
             except:
                 self.handle_page_error()
                 continue
-
         return output, special
 
     
@@ -77,6 +76,10 @@ class Checker:
     def click_on_button(self):
         for trys in range(5):
             try:
+                radio_xpath = "//label[@class='ets-radio-control']"
+                btn = self.driver.find_elements_by_xpath(radio_xpath)[0]
+                ActionChains(self.driver).move_to_element(btn).click(btn).perform()
+                
                 radio_xpath = "//label[@class='ets-radio-control']"
                 btn = self.driver.find_elements_by_xpath(radio_xpath)[1]
                 ActionChains(self.driver).move_to_element(btn).click(btn).perform()
