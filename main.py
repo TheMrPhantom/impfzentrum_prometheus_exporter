@@ -32,7 +32,7 @@ class Main:
     def check_stations(self):
 
         for vac_station_key in self.vac_stations_queue:
-            vac_station=self.vac_stations_queue[vac_station_key]
+            vac_station = self.vac_stations_queue[vac_station_key]
             print(self.check_queue_ready(vac_station[1]))
             if self.check_queue_ready(vac_station[1]):
                 result, special = self.vac_checker.getVacStatus(vac_station[0])
@@ -95,7 +95,7 @@ class Main:
 
     def check_queue_ready(self, time):
         difference = (time-datetime.datetime.now()).total_seconds()
-        print(difference)
+
         return difference < 0
 
 

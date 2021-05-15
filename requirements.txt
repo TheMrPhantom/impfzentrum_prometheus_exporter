@@ -1,3 +1,4 @@
 selenium
 prometheus-client
 pytz
+torpy
