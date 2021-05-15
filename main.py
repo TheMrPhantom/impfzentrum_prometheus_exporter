@@ -5,7 +5,7 @@ import time
 import prometheus_client
 import checker
 import zentren
-
+import os
 # '{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
 
 class Main:
@@ -75,4 +75,8 @@ class Main:
 main = Main()
 while True:
     main.check_stations()
-    time.sleep(180)
+    update_rate = os.environ.get("UPDATERATE")
+    if update_rate is not None:
+        time.sleep(int(update_rate))
+    else:
+        time.sleep(180)
