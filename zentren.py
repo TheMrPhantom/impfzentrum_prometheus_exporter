@@ -10,7 +10,7 @@ def getZentren():
     bw = data["Baden-Württemberg"]
     output, debug = list(), list()
     for z in bw:
-        if z["PLZ"] == "70174" or z["PLZ"] == "70376" or z["PLZ"] == "70629" or z["PLZ"] == "71065" or z["PLZ"] == "71334" or z["PLZ"] == "72072" or z["PLZ"] == "72213" or z["PLZ"] == "75175":
+        if z["PLZ"] == "70174" or z["PLZ"] == "70376" or z["PLZ"] == "70629" or z["PLZ"] == "71065" or z["PLZ"] == "71297" or z["PLZ"] == "71334" or z["PLZ"] == "71636" or z["PLZ"] == "73730" or z["PLZ"] == "72072" or z["PLZ"] == "72213" or z["PLZ"] == "72762" or z["PLZ"] == "73037":
             output.append(z)
         else:
             debug.append(z)
