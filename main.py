@@ -1,51 +1,109 @@
-import requests
-import json
-import time
 import datetime
+from os import lseek, stat, wait
 import pytz
-
-#'{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
-
+import time
 import prometheus_client
+import checker
+import zentren
+import os
+import envir
 
-plz=["73730","71065","71297","71334","71636"]
+# '{"termineVorhanden":true,"vorhandeneLeistungsmerkmale":["L920"]}'
 
-metrics=dict()
 
-metrics['impfzentrum_status']=prometheus_client.Gauge('impfzentrum_status', 'Impfstoffverfügbarkeit',['zentrum'])
-metrics['lasttimechecked']=prometheus_client.Gauge('impfzentrum_lastCheck', 'Letze prüfung')
+class Main:
 
-prometheus_client.start_http_server(8005)
+    def __init__(self):
+        self.metrics = dict()
 
-plz=["73730","71065","71297","71334","71636"]
-outp={}
-while True:
-    for zentrum in range(1,300):
-        for p in plz:
-            session = requests.Session()
-            session.get("https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/impftermine/service?plz="+p,headers={"Referer":"https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/impftermine/service?plz="+p,"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"})
-            r=session.get("https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/rest/suche/termincheck?plz="+p+"&leistungsmerkmale=L920,L921,L922,L923",headers={"Referer":"https://"+"{:03d}".format(zentrum)+"-iz.impfterminservice.de/impftermine/service?plz="+p,"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36"})
-            print(r,r.text)
-            if r.status_code != 200:
-                outp[p]=r.status_code
-            else:
-                resp=json.loads(r.text)
-                if r.text=="{}":
-                    print("empty")
-                    outp[p]=0
-                    continue
-                if resp["termineVorhanden"]:
-                    for m in resp["vorhandeneLeistungsmerkmale"]:
-                        outp[p]=int(resp["vorhandeneLeistungsmerkmale"].replace("L",""))
+        self.metrics['impfzentrum_status'] = prometheus_client.Gauge(
+            'impfzentrum_status', 'Impfstoffverfügbarkeit', ['zentrum'])
+        self.metrics['lasttimechecked'] = prometheus_client.Gauge(
+            'impfzentrum_lastCheck', 'Letze prüfung', ['zentrum'])
+
+        self.vac_stations = zentren.getZentren()
+        self.vac_checker = checker.Checker()
+        self.vac_stations_queue = dict()
+        for v in self.vac_stations:
+            self.vac_stations_queue[v["PLZ"]] = [v, datetime.datetime.now()]
+
+        prometheus_client.start_http_server(8080)
+
+    def check_stations(self):
+
+        for vac_station_key in self.vac_stations_queue:
+            vac_station=self.vac_stations_queue[vac_station_key]
+            print(self.check_queue_ready(vac_station[1]))
+            if self.check_queue_ready(vac_station[1]):
+                result, special = self.vac_checker.getVacStatus(vac_station[0])
+                station_label = self.get_station_label(vac_station[0])
+
+                if result is not None:
+                    self.valid_response(result, station_label)
+                    vac_station[1] = self.create_normal_queue()
                 else:
-                    outp[p]=0
-            
-        print(outp)
-        print()
+                    self.invalid_response(special, station_label)
+                    if special == "warteraum" or special == "telefon" or special == "noservice":
+                        vac_station[1] = self.create_timout_queue()
+                    else:
+                        vac_station[1] = self.create_normal_queue()
+                self.update_time_metric(station_label)
 
-        for p in plz:
-            metrics['impfzentrum_status'].labels(zentrum=p).set(outp[p])
-        metrics['lasttimechecked'].set(datetime.datetime.now(tz=pytz.utc).timestamp()*1000)
-        time.sleep(60)
+                time.sleep(15)
+
+    def get_station_label(self, vac_station):
+        station_label = vac_station["PLZ"]
+        station_label += "#"
+        station_label += vac_station["Ort"]
+        station_label += "166153284"
+        station_label += vac_station["Zentrumsname"]
+        station_label = station_label.strip()
+
+        return station_label
+
+    def valid_response(self, result, station_label):
+        if not result["termineVorhanden"]:
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(0)
+        else:
+            self.metrics['impfzentrum_status'].labels(zentrum=station_label).set(
+                int(str(result["vorhandeneLeistungsmerkmale"][0]).replace("L", "")))
+
+    def invalid_response(self, special, station_label):
+        if special == "warteraum":
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(4)
+        elif special == "telefon":
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(3)
+        elif special == "noservice":
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(2)
+        else:
+            self.metrics['impfzentrum_status'].labels(
+                zentrum=station_label).set(1)
+
+    def update_time_metric(self, station_label):
+        self.metrics['lasttimechecked'].labels(zentrum=station_label).set(
+            datetime.datetime.now(tz=pytz.utc).timestamp()*1000)
+
+    def create_timout_queue(self):
+        return datetime.datetime.now()+datetime.timedelta(seconds=envir.timeout)
+
+    def create_normal_queue(self):
+        return datetime.datetime.now()+datetime.timedelta(seconds=envir.wait)
+
+    def check_queue_ready(self, time):
+        difference = (time-datetime.datetime.now()).total_seconds()
+        print(difference)
+        return difference < 0
 
 
+main = Main()
+while True:
+    main.check_stations()
+    update_rate = envir.update_rate
+    if update_rate is not None:
+        time.sleep(int(update_rate))
+    else:
+        time.sleep(180)
