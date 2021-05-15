@@ -10,13 +10,13 @@ def getZentren():
     bw = data["Baden-Württemberg"]
     output, debug = list(), list()
     for z in bw:
-        if z["PLZ"].startswith("70") or z["PLZ"].startswith("71") or z["PLZ"].startswith("72") or z["PLZ"] == "73730" or z["PLZ"] == "75175":
+        if z["PLZ"] == "70174" or z["PLZ"] == "70376" or z["PLZ"] == "70629" or z["PLZ"] == "71065" or z["PLZ"] == "71334" or z["PLZ"] == "72072" or z["PLZ"] == "72213" or z["PLZ"] == "75175":
             output.append(z)
         else:
             debug.append(z)
 
     debug_mode = os.environ.get("DEBUG")
-    if debug_mode is None or debug_mode == 0:
+    if debug_mode is None or debug_mode == "0":
         return output
     else:
         one_random_impfzentrum = debug[randint(0, len(debug)-1)]

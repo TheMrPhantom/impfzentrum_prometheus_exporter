@@ -34,6 +34,9 @@ class Main:
             else:
                 self.invalid_response(special, station_label)
             self.update_time_metric(station_label)
+            
+            time.sleep(27)
+
 
     def get_station_label(self, vac_station):
         station_label = vac_station["PLZ"]
