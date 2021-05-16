@@ -20,20 +20,27 @@ class Main:
             'impfzentrum_status', 'Impfstoffverfügbarkeit', ['zentrum'])
         self.metrics['lasttimechecked'] = prometheus_client.Gauge(
             'impfzentrum_lastCheck', 'Letze prüfung', ['zentrum'])
+        self.metrics['lasttimechecked_ip'] = prometheus_client.Gauge(
+            'impfzentrum_last_ip', 'Letze prüfungs ip', ['zentrum','ipPart'])
 
         self.vac_stations = zentren.getZentren()
-        self.vac_checker = checker.Checker()
+        self.vac_checker = checker.Checker(self.set_ip_metric)
         self.vac_stations_queue = dict()
         for v in self.vac_stations:
             self.vac_stations_queue[v["PLZ"]] = [v, datetime.datetime.now()]
 
         prometheus_client.start_http_server(8080)
 
+    def set_ip_metric(self,ip,vac_station):
+        parts=ip.split(".")
+        label=self.get_station_label(vac_station)
+        for i in range(4):
+            self.metrics['lasttimechecked_ip'].labels(zentrum=label,ipPart=i).set(parts[i])
+
     def check_stations(self):
 
         for vac_station_key in self.vac_stations_queue:
-            vac_station=self.vac_stations_queue[vac_station_key]
-            print(self.check_queue_ready(vac_station[1]))
+            vac_station = self.vac_stations_queue[vac_station_key]
             if self.check_queue_ready(vac_station[1]):
                 result, special = self.vac_checker.getVacStatus(vac_station[0])
                 station_label = self.get_station_label(vac_station[0])
@@ -49,7 +56,7 @@ class Main:
                         vac_station[1] = self.create_normal_queue()
                 self.update_time_metric(station_label)
 
-                time.sleep(15)
+                #time.sleep(15)
 
     def get_station_label(self, vac_station):
         station_label = vac_station["PLZ"]
@@ -95,7 +102,7 @@ class Main:
 
     def check_queue_ready(self, time):
         difference = (time-datetime.datetime.now()).total_seconds()
-        print(difference)
+
         return difference < 0
 
 
