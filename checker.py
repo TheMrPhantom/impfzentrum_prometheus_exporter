@@ -8,6 +8,7 @@ import traceback
 import signal
 import sys
 import time
+import random 
 
 class Checker:
 
@@ -67,6 +68,7 @@ class Checker:
         output = None
         special = None
         for trys in range(1, 5):
+            time.sleep(self.get_waiting_time())
             in_waitingroom, waitingroom_text = self.check_in_waitingroom(
                 url, plz)
             if in_waitingroom:
@@ -74,8 +76,10 @@ class Checker:
                 continue
             print(trys, "Juhu")
             try:
+                time.sleep(self.get_waiting_time())
                 self.click_on_button()
                 
+                time.sleep(self.get_waiting_time())
                 page_content = self.check_appointment_page(url,plz)
 
                 if page_content == "{}":
@@ -147,3 +151,8 @@ class Checker:
             print("Error after base page")
 
         return output
+
+    def get_waiting_time():
+        t=int(random.random()*100)/10.0
+        print("Waiting for",t,"seconds...")
+        return t
