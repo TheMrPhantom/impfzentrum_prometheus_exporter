@@ -8,22 +8,25 @@ import traceback
 import signal
 import sys
 import time
-import random 
+import random
+
 
 class Checker:
 
     def __init__(self):
         print("Init browser")
-        profile=FirefoxProfile()
+        profile = FirefoxProfile()
         profile.set_preference("dom.webdriver.enabled", False)
         profile.set_preference('useAutomationExtension', False)
-        profile.set_preference("general.useragent.override", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
+        profile.set_preference("general.useragent.override",
+                               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
         profile.update_preferences()
         desired = DesiredCapabilities.FIREFOX
 
         options = Options()
         options.headless = True
-        self.driver = webdriver.Firefox(options=options,firefox_profile=profile,desired_capabilities=desired)
+        self.driver = webdriver.Firefox(
+            options=options, firefox_profile=profile, desired_capabilities=desired)
         signal.signal(signal.SIGINT, self.kill_signal_handler)
 
         """
@@ -50,10 +53,10 @@ class Checker:
         """
         print("Finished...")
 
-    def get_cookie_number(self,cookie):
-        cook=cookie["value"]
-        tilde_pos=cook.find("~")
-        print(cook[:tilde_pos],cook[tilde_pos+4:])
+    def get_cookie_number(self, cookie):
+        cook = cookie["value"]
+        tilde_pos = cook.find("~")
+        print(cook[:tilde_pos], cook[tilde_pos+4:])
 
     def kill_signal_handler(self, sig, frame):
         print('SIGINT incoming')
@@ -78,9 +81,9 @@ class Checker:
             try:
                 time.sleep(self.get_waiting_time())
                 self.click_on_button()
-                
+
                 time.sleep(self.get_waiting_time())
-                page_content = self.check_appointment_page(url,plz)
+                page_content = self.check_appointment_page(url, plz)
 
                 if page_content == "{}":
                     print("EmptyPage")
@@ -94,7 +97,6 @@ class Checker:
                 continue
         return output, special
 
-    
     def check_in_waitingroom(self, url, plz):
         self.driver.get(url+"impftermine/service?plz="+str(plz))
         special = None
@@ -112,11 +114,13 @@ class Checker:
             try:
                 radio_xpath = "//label[@class='ets-radio-control']"
                 btn = self.driver.find_elements_by_xpath(radio_xpath)[0]
-                ActionChains(self.driver).move_to_element(btn).click(btn).perform()
-                
+                ActionChains(self.driver).move_to_element(
+                    btn).click(btn).perform()
+
                 radio_xpath = "//label[@class='ets-radio-control']"
                 btn = self.driver.find_elements_by_xpath(radio_xpath)[1]
-                ActionChains(self.driver).move_to_element(btn).click(btn).perform()
+                ActionChains(self.driver).move_to_element(
+                    btn).click(btn).perform()
                 break
             except:
                 pass
@@ -137,7 +141,7 @@ class Checker:
         return page_content
 
     def handle_page_error(self):
-        
+
         self.driver.save_screenshot("fail.png")
         output = None
         if "wenden Sie sich bitte telefonisch" in self.driver.page_source:
@@ -153,6 +157,6 @@ class Checker:
         return output
 
     def get_waiting_time(self):
-        t=int(random.random()*100)/10.0
-        print("Waiting for",t,"seconds...")
+        t = ((int(random.random()*100)/10.0)/2)+5
+        print("Waiting for", t, "seconds...")
         return t
