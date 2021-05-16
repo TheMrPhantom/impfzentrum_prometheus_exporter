@@ -13,17 +13,21 @@ import traceback
 import signal
 import sys
 import time
+
 from envir import proxy_port, proxy_hops
 import tor
 from termcolor import colored
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import random
+
 
 class Checker:
 
     def __init__(self, ip_function=None):
         print("Init browser")
+
         self.ip_function = ip_function
         self.prox = tor.Proxy_Handler()
         print("Proxy initial start")
@@ -34,6 +38,7 @@ class Checker:
         profile.set_preference("dom.webdriver.enabled", False)
         profile.set_preference('useAutomationExtension', False)  
         profile.set_preference("devtools.jsonview.enabled", False)  
+
         profile.set_preference("general.useragent.override",
                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
         profile.update_preferences()
@@ -45,11 +50,37 @@ class Checker:
         desired = DesiredCapabilities.FIREFOX
         options = Options()
         options.headless = True
+
         options.add_argument("-devtools")
+
         self.driver = webdriver.Firefox(
             options=options, firefox_profile=profile, desired_capabilities=desired)
         signal.signal(signal.SIGINT, self.kill_signal_handler)
+
+        """
+        self.driver.get("https://001-iz.impfterminservice.de/impftermine/service?plz=70376")
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1.654)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        """
         print("Finished...")
+
 
     def make_stable_tor_connection(self, output=False):
         connection_stable = False
@@ -73,6 +104,12 @@ class Checker:
                 traceback.print_exc()
                 print(colored("No stable tor connection", "red"))
         return ip_found['ip']
+
+    def get_cookie_number(self, cookie):
+        cook = cookie["value"]
+        tilde_pos = cook.find("~")
+        print(cook[:tilde_pos], cook[tilde_pos+4:])
+
 
     def kill_signal_handler(self, sig, frame):
         print('SIGINT incoming')
@@ -142,6 +179,7 @@ class Checker:
         return is_waitingroom, special
 
     def click_on_button(self):
+
         print("Click on button")
 
         wait = WebDriverWait(self.driver, 10)
@@ -149,6 +187,7 @@ class Checker:
         ActionChains(self.driver).move_to_element(men_menu).click().perform()
         print("Done")
         self.driver.save_screenshot("btn_click.png")
+
 
 
     def check_appointment_page(self, url, plz):
@@ -186,7 +225,7 @@ class Checker:
         return page_content
 
     def handle_page_error(self):
-        
+
         self.driver.save_screenshot("fail.png")
         output = None
         if "wenden Sie sich bitte telefonisch" in self.driver.page_source:
@@ -199,3 +238,8 @@ class Checker:
             print("Error")
 
         return output
+
+    def get_waiting_time(self):
+        t = ((int(random.random()*100)/10.0)/2)+5
+        print("Waiting for", t, "seconds...")
+        return t
