@@ -7,6 +7,7 @@ import json
 import traceback
 import signal
 import sys
+import time
 
 class Checker:
 
@@ -15,6 +16,7 @@ class Checker:
         profile=FirefoxProfile()
         profile.set_preference("dom.webdriver.enabled", False)
         profile.set_preference('useAutomationExtension', False)
+        profile.set_preference("general.useragent.override", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
         profile.update_preferences()
         desired = DesiredCapabilities.FIREFOX
 
@@ -22,7 +24,35 @@ class Checker:
         options.headless = True
         self.driver = webdriver.Firefox(options=options,firefox_profile=profile,desired_capabilities=desired)
         signal.signal(signal.SIGINT, self.kill_signal_handler)
+
+        """
+        self.driver.get("https://001-iz.impfterminservice.de/impftermine/service?plz=70376")
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1.654)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        time.sleep(1)
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        self.get_cookie_number(self.driver.get_cookie("akavpau_User_allowed"))
+        self.driver.get("https://001-iz.impfterminservice.de/rest/suche/termincheck?plz=70376&leistungsmerkmale=L920,L921,L922,L923")
+        print("{}" not in self.driver.page_source)
+        """
         print("Finished...")
+
+    def get_cookie_number(self,cookie):
+        cook=cookie["value"]
+        tilde_pos=cook.find("~")
+        print(cook[:tilde_pos],cook[tilde_pos+4:])
 
     def kill_signal_handler(self, sig, frame):
         print('SIGINT incoming')
