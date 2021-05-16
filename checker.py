@@ -152,7 +152,7 @@ class Checker:
 
         return output
 
-    def get_waiting_time():
+    def get_waiting_time(self):
         t=int(random.random()*100)/10.0
         print("Waiting for",t,"seconds...")
         return t
