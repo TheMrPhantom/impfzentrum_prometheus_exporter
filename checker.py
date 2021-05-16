@@ -70,7 +70,7 @@ class Checker:
         plz = center["PLZ"]
         output = None
         special = None
-        for trys in range(1, 5):
+        for trys in range(1, 3):
             time.sleep(self.get_waiting_time())
             in_waitingroom, waitingroom_text = self.check_in_waitingroom(
                 url, plz)
@@ -88,7 +88,7 @@ class Checker:
                 if page_content == "{}":
                     print("EmptyPage")
                     self.driver.delete_all_cookies()
-                    continue
+                    break
                 output = json.loads(page_content)
                 print(plz, output)
                 break
