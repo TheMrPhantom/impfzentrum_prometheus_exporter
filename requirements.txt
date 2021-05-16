@@ -2,3 +2,4 @@ selenium
 prometheus-client
 pytz
 torpy
+termcolor
