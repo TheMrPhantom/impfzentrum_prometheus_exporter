@@ -12,6 +12,12 @@ RUN tar -xvzf geckodriver*
 RUN chmod +x geckodriver
 RUN mv geckodriver /usr/local/bin/
 
+RUN apt install chromium -y
+RUN wget https://chromedriver.storage.googleapis.com/90.0.4430.24/chromedriver_linux64.zip
+RUN unzip chromedriver_linux64.zip
+RUN chmod +x chromedriver
+RUN mv chromedriver /usr/local/bin/
+
 COPY requirements.txt ./
 RUN pip3 install --upgrade pip
 RUN pip3 install --no-cache-dir -r requirements.txt

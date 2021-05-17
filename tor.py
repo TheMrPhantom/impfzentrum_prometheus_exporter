@@ -1,11 +1,13 @@
 import subprocess
 import envir
 import time
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-from selenium.webdriver.firefox.options import Options
 from selenium.webdriver import ActionChains
 from selenium.webdriver import DesiredCapabilities
 from selenium.common.exceptions import InvalidSessionIdException
+
+
+from selenium.webdriver.chrome.options import Options
+
 
 import envir
 from selenium import webdriver
@@ -20,39 +22,34 @@ class Proxy_Handler:
         self.proc=None
         if proxy_port is None:
             proxy_port=envir.proxy_port
+        self.proxy_port=proxy_port
+        self.spawn_chrome()
+    
+    def spawn_chrome(self):
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument(
+            '--disable-blink-features=AutomationControlled')
+        chrome_options.add_argument("user-data-dir=chro/")
+        chrome_options.add_argument("window-size=1280,800")
+        chrome_options.add_argument(
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.169 Safari/537.36")
 
-        self.port=proxy_port   
-        self.profile = FirefoxProfile()
-        self.profile.set_preference("dom.webdriver.enabled", False)
-        self.profile.set_preference('useAutomationExtension', False)  
-        self.profile.set_preference("devtools.jsonview.enabled", False)  
-
-        self.profile.set_preference("general.useragent.override",
-                               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36")
-        self.profile.update_preferences()
-
-        self.profile.set_preference("network.proxy.type", 1)
-        self.profile.set_preference("network.proxy.socks", "localhost")
-        self.profile.set_preference("network.proxy.socks_port", int(proxy_port))
-
-        self.desired = DesiredCapabilities.FIREFOX
-        self.options = Options()
-        self.options.headless = True
-
-        self.options.add_argument("-devtools")
-
-        self.driver = webdriver.Firefox(
-            options=self.options, firefox_profile=self.profile, desired_capabilities=self.desired)
+        if self.proxy_port is not None:
+             chrome_options.add_argument("--proxy-server=socks5://localhost:" + str(self.proxy_port));
+        self.driver = webdriver.Chrome(options=chrome_options)
         
-
 
     def start_proxy(self,output=False):
         # with output to console
         print("Start tor connection")
         if output:
-            self.proc = subprocess.Popen(['torpy_socks', '-p', str(self.port), '--hops', str(envir.proxy_hops)])
+            self.proc = subprocess.Popen(['torpy_socks', '-p', str(self.proxy_port), '--hops', str(envir.proxy_hops)])
         else:
-            self.proc = subprocess.Popen(['torpy_socks', '-p', str(self.port), '--hops', str(envir.proxy_hops)],stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.proc = subprocess.Popen(['torpy_socks', '-p', str(self.proxy_port), '--hops', str(envir.proxy_hops)],stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         for i in range(6):
             #print("sleeping",i,"/","6")
@@ -88,8 +85,7 @@ class Proxy_Handler:
                 connection_stable = True
             except InvalidSessionIdException:
                 self.driver.close() 
-                self.driver = webdriver.Firefox(
-                options=self.options, firefox_profile=self.profile, desired_capabilities=self.desired)  
+                self.spawn_chrome()
             except:
                 time.sleep(0.5)
                 traceback.print_exc()
