@@ -6,7 +6,7 @@ from envir import proxy_port as PROXY_PORT
 import threading
 import prometheus_client
 import time
-
+from termcolor import colored
 metrics = dict()
 metrics['impfzentrum_status'] = prometheus_client.Gauge(
     'impfzentrum_status', 'Impfstoffverfügbarkeit', ['zentrum'])
@@ -19,7 +19,6 @@ terminated=False
 
 def set_terminated():
     global terminated
-    
     terminated=True
 
 vac_centers = get_vac_centers()
@@ -39,4 +38,5 @@ for vac_center in vac_centers:
 while True:
     time.sleep(1)
     if terminated:
+        print(colored("Restarting container...","red"))
         exit(1)

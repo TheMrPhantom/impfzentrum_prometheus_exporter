@@ -51,7 +51,7 @@ def checker_thread(port, center, prometheus_metric,terminator):
     while True:
 
         print("Fails: ", fails)
-        if fails[0] > 3 or fails[1] > 3 or empty_counter >= 2:
+        if fails[0] > 2 or fails[1] > 2 or empty_counter >= 2:
             terminator()
 
         if number_of_tries % modulo == 0:
