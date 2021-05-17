@@ -1,4 +1,5 @@
 import json
+from random import randint, random
 import traceback
 from selenium import webdriver
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
@@ -11,9 +12,11 @@ import time
 import tor
 import datetime
 import pytz
+import sys
 
 
-def checker_thread(port, center, prometheus_metric):
+def checker_thread(port, center, prometheus_metric,terminator):
+
     url = center["URL"]
     plz = center["PLZ"]
     proxy = tor.Proxy_Handler(port)
@@ -32,7 +35,7 @@ def checker_thread(port, center, prometheus_metric):
     profile.update_preferences()
 
     desired = DesiredCapabilities.FIREFOX
-    
+
     options = Options()
     options.headless = True
     options.add_argument("-devtools")
@@ -41,13 +44,16 @@ def checker_thread(port, center, prometheus_metric):
     number_of_tries = 0
     fails = [0, 0]
     responses = [None, None, None, None]
+    empty_counter = 0
+
+    print("Starting check loop")
+
     while True:
 
-        print("Fails: ",fails)
-        if fails[0] > 3 or fails[1] > 3:
-            proxy.restart_proxy()
-            proxy.check_stable_tor_connection()
-            
+        print("Fails: ", fails)
+        if fails[0] > 3 or fails[1] > 3 or empty_counter >= 2:
+            exit(1)
+
         if number_of_tries % modulo == 0:
             try:
                 print("Spawning Firefox")
@@ -55,9 +61,11 @@ def checker_thread(port, center, prometheus_metric):
                     ff.close()
                 ff = webdriver.Firefox(
                     options=options, firefox_profile=profile, desired_capabilities=desired)
-                ff.set_window_size(1920,1080)
-                ff.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-                ff.set_page_load_timeout(15)
+                ff.delete_all_cookies()
+                ff.set_window_size(1920, 1080)
+                ff.execute_script(
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                ff.set_page_load_timeout(30)
                 print("Loading waiting room")
                 ff.get(waiting_room_url(url, plz))
                 print("Click cookie button")
@@ -90,11 +98,14 @@ def checker_thread(port, center, prometheus_metric):
                 responses[(number_of_tries % modulo) - 1] = page_in_json
                 fails[1] = 0
             except:
+                #Here if timeout
                 fails[1] += 1
                 traceback.print_exc()
-        print("Responses: ", responses)
-        if (number_of_tries % modulo == 0) and (number_of_tries > 0):
-            output = -1
+            """
+            print("Responses: ", responses)
+            if (number_of_tries % modulo == 0) and (number_of_tries > 0):
+                output = -1
+            
             for response in responses:
                 if len(response) == 0:
                     if output != 0:
@@ -105,16 +116,32 @@ def checker_thread(port, center, prometheus_metric):
                     break
                 else:
                     output = 0
+            """
+            response=responses[(number_of_tries % modulo) - 1]
+            if len(response) == 0:
+                output = 1
+            elif response["termineVorhanden"]:
+                output = int(
+                    str(response["vorhandeneLeistungsmerkmale"][0]).replace("L", ""))
+                break
+            else:
+                output = 0
+
+            if output == 1:
+                empty_counter += 1
+            else:
+                empty_counter = 0
             print("Respons picked: ", response)
             prometheus_metric[0].labels(
                 zentrum=get_station_label(center)).set(output)
             update_time_metric(prometheus_metric[1], get_station_label(center))
-            prometheus_metric[1]
+        
+        if number_of_tries % modulo != 0:
+            print("Sleeping...")
+            time.sleep(randint(160,200))
+            print("Awaking...")
+        
         number_of_tries += 1
-
-
-
-        time.sleep(5)
 
 
 def waiting_room_url(url, plz):
@@ -147,21 +174,6 @@ def valid_response(metric, result, station_label):
     else:
         metric.labels(zentrum=station_label).set(
             int(str(result["vorhandeneLeistungsmerkmale"][0]).replace("L", "")))
-
-
-def invalid_response(metric, special, station_label):
-    if special == "warteraum":
-        self.metrics['impfzentrum_status'].labels(
-            zentrum=station_label).set(4)
-    elif special == "telefon":
-        self.metrics['impfzentrum_status'].labels(
-            zentrum=station_label).set(3)
-    elif special == "noservice":
-        self.metrics['impfzentrum_status'].labels(
-            zentrum=station_label).set(2)
-    else:
-        self.metrics['impfzentrum_status'].labels(
-            zentrum=station_label).set(1)
 
 
 def update_time_metric(metric, station_label):

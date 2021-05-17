@@ -19,7 +19,7 @@ profile.update_preferences()
 
 desired = DesiredCapabilities.FIREFOX
 options = Options()
-options.headless = True
+options.headless = False
 options.add_argument("-devtools")
 
 modulo=5

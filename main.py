@@ -1,9 +1,11 @@
+from traceback import TracebackException
 from prometheus_client import metrics
 from vac_center_handler import get_vac_centers
 from checker import checker_thread
 from envir import proxy_port as PROXY_PORT
 import threading
 import prometheus_client
+import time
 
 metrics = dict()
 metrics['impfzentrum_status'] = prometheus_client.Gauge(
@@ -12,6 +14,13 @@ metrics['lasttimechecked'] = prometheus_client.Gauge(
     'impfzentrum_lastCheck', 'Letze prüfung', ['zentrum'])
 
 prometheus_client.start_http_server(8080)
+
+terminated=False
+
+def set_terminated():
+    global terminated
+    
+    terminated=True
 
 vac_centers = get_vac_centers()
 print("[CONTROL FLOW] Vac Centers loaded.")
@@ -22,7 +31,12 @@ for vac_center in vac_centers:
           ". Starting a new thread.")
     prometheus = [metrics['impfzentrum_status'], metrics['lasttimechecked']]
 
-    arguments = (PROXY_PORT + port_offset, vac_center, prometheus)
-    thread = threading.Thread(target=checker_thread, args=arguments)
+    arguments = (PROXY_PORT + port_offset, vac_center, prometheus, set_terminated)
+    thread = threading.Thread(target=checker_thread, args=arguments,daemon=True)
     port_offset += 1
     thread.start()
+
+while True:
+    time.sleep(1)
+    if terminated:
+        exit(1)
