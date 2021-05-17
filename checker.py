@@ -1,6 +1,5 @@
 import json
 from random import randint, random
-import traceback
 from selenium import webdriver
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.firefox.options import Options
@@ -12,7 +11,6 @@ import time
 import tor
 import datetime
 import pytz
-import sys
 
 
 def checker_thread(port, center, prometheus_metric,terminator):
@@ -38,7 +36,7 @@ def checker_thread(port, center, prometheus_metric,terminator):
 
     options = Options()
     options.headless = True
-    options.add_argument("-devtools")
+    #options.add_argument("-devtools")
     ff = None
     modulo = 5
     number_of_tries = 0
