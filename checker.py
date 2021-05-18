@@ -3,6 +3,7 @@ import tor
 import datetime
 import pytz
 import ChromeChecker
+import traceback
 
 
 def checker_thread(port, center, prometheus_metric, terminator):
@@ -18,12 +19,20 @@ def checker_thread(port, center, prometheus_metric, terminator):
         while True:
 
             output = checker.check_vac(center)
+            if output > 4:
+                message = "Impfstoff verfügbar in: " + \
+                    center["Zentrumsname"]+"\n"
+                message += "Nachrichten-Typ: "+str(output)+"\n\n"
+                message += center["URL"] + \
+                    "impftermine/service?plz="+center["PLZ"]
+                checker.publish(message)
             prometheus_metric[0].labels(
                 zentrum=get_station_label(center)).set(output)
             update_time_metric(prometheus_metric[1], get_station_label(center))
 
             time.sleep(15)
     except:
+        traceback.print_exc()
         terminator()
 
 

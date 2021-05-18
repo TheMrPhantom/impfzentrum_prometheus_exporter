@@ -8,11 +8,15 @@ from selenium.common.exceptions import TimeoutException
 import random
 from termcolor import colored
 import datetime
+import paho.mqtt.client as mqtt
+import envir
+import threading
 
 
 class ChromeChecker:
 
     def __init__(self, proxy_port=None):
+        self.init_mqtt()
         self.driver = webdriver.Chrome(
             options=self.get_chrome_options(proxy_port))
         self.wait = WebDriverWait(self.driver, 25)
@@ -108,3 +112,20 @@ class ChromeChecker:
             output = 0
 
         return output
+
+    def init_mqtt(self):
+        self.client = mqtt.Client()
+        self.client.on_connect = self.on_connect
+        self.client.connect(envir.broker_adress, 1883, 60)
+        thread = threading.Thread(target=self.loop, daemon=True)
+
+    def on_connect(self, client, userdata, flags, rc):
+        print("Connected with result code "+str(rc))
+
+    def loop(self):
+        while True:
+            self.client.loop()
+            time.sleep(1)
+
+    def publish(self, string_to_publish):
+        self.client.publish(envir.mqtt_topic, string_to_publish, qos=1)

@@ -3,3 +3,4 @@ __pycache__/
 dashboard.json
 *.png
 chro/
+docker-compose.yml

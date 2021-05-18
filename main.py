@@ -1,4 +1,5 @@
 from traceback import TracebackException
+import traceback
 from prometheus_client import metrics
 from vac_center_handler import get_vac_centers
 from checker import checker_thread

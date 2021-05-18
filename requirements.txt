@@ -3,3 +3,5 @@ prometheus-client
 pytz
 torpy
 termcolor
+paho-mqtt
+python-telegram-bot
