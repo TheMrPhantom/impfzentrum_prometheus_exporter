@@ -7,6 +7,8 @@ import time
 from selenium.common.exceptions import TimeoutException
 import random
 from termcolor import colored
+import datetime
+
 
 class ChromeChecker:
 
@@ -48,9 +50,11 @@ class ChromeChecker:
         # Warteraum check is "Virtueller Warteraum des Impfterminservice" if warteraum
         title = self.wait.until(
             EC.presence_of_element_located((By.XPATH, '//h1')))
+
         webpage_info = title.text
+        print(colored("[Page]", "yellow"), "\t", webpage_info)
         if webpage_info == "Virtueller Warteraum des Impfterminservice":
-            print(colored("In waiting room","cyan"))
+            print(colored("In waiting room", "cyan"))
             return 4
 
         print("No waiting room")
@@ -78,8 +82,17 @@ class ChromeChecker:
             element = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, '//div[contains(@class, "alert-danger")]')))
             vaccine_available = not ('keine freien Termine' in element.text)
+            print(colored("[Page]", "yellow"), "\t", element.text)
+
+            if "Gehören Sie einer impfberechtigten Personengruppen an?" in self.driver.page_source:
+                return 7
+            if "Bitte geben Sie Ihr Alter ein" in self.driver.page_source:
+                return 8
+            if "impfberechtigten" in self.driver.page_source:
+                return 9
+
         except TimeoutException:
-            print(colored("Maybe vaccine available","magenta"))
+            print(colored("Maybe vaccine available", "magenta"))
             return 5
 
         self.driver.save_screenshot("4.png")
@@ -89,9 +102,9 @@ class ChromeChecker:
         output = -1
         if vaccine_available:
             output = 6
-            print(colored("Vaccine available","green"))
+            print(colored("Vaccine available", "green"))
         else:
-            print(colored("No vaccine available","magenta"))
+            print(colored("No vaccine available", "magenta"))
             output = 0
 
         return output

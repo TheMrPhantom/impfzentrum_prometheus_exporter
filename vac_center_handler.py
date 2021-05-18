@@ -19,11 +19,12 @@ def get_vac_centers():
             else:
                 debug.append(z)
     else:
-        for z in bw:
-            if z["PLZ"] == PLZ:
-                output.append(z)
-            else:
-                debug.append(z)
+        for zentr in data:
+            for z in data[zentr]:
+                if z["PLZ"] == PLZ:
+                    output.append(z)
+                else:
+                    debug.append(z)
 
     debug_mode = os.environ.get("DEBUG")
     if debug_mode is None or debug_mode == "0":

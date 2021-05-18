@@ -89,3 +89,21 @@ services:
     restart:  on-failure
     ports:
       - 1110:8080
+  impfchecker11:
+    image: impfchecker
+    environment:
+      - PROXY_PORT=1060
+      - PROXY_HOPS=3
+      - PLZ=72213
+    restart:  on-failure
+    ports:
+      - 1111:8080
+  impfchecker12:
+    image: impfchecker
+    environment:
+      - PROXY_PORT=1061
+      - PROXY_HOPS=3
+      - PLZ=75175
+    restart:  on-failure
+    ports:
+      - 1112:8080
