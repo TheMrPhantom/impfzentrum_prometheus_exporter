@@ -21,6 +21,7 @@ RUN mv chromedriver /usr/local/bin/
 COPY requirements.txt ./
 RUN pip3 install --upgrade pip
 RUN pip3 install --no-cache-dir -r requirements.txt
+RUN mkdir images
 
 COPY . .
 EXPOSE 8080

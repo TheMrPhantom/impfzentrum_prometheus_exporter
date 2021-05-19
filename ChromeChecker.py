@@ -4,23 +4,39 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 import time
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import InvalidElementStateException, TimeoutException
+from selenium.webdriver import DesiredCapabilities
 import random
 from termcolor import colored
 import datetime
 import paho.mqtt.client as mqtt
 import envir
 import threading
+import json
 
 
 class ChromeChecker:
 
     def __init__(self, proxy_port=None):
         self.init_mqtt()
-        self.driver = webdriver.Chrome(
-            options=self.get_chrome_options(proxy_port))
-        self.wait = WebDriverWait(self.driver, 25)
+        self.proxy_port = proxy_port
+
+    def open_browser(self):
         print("Browser open")
+        for i in range(5):
+            try:
+                capabilities = DesiredCapabilities.CHROME
+
+                self.driver = webdriver.Chrome(
+                    options=self.get_chrome_options(self.proxy_port), desired_capabilities=capabilities)
+                self.wait = WebDriverWait(self.driver, 25)
+                return
+            except:
+                pass
+        raise InvalidElementStateException
+
+    def close_browser(self):
+        self.driver.close()
 
     def get_chrome_options(self, proxy_port=None):
         chrome_options = Options()
@@ -40,11 +56,32 @@ class ChromeChecker:
                 "--proxy-server=socks5://localhost:" + str(proxy_port))
         return chrome_options
 
+    def print_logs(self):
+        logs_raw = self.driver.get_log("performance")
+        logs = [self.json.loads(lr["message"])["message"] for lr in logs_raw]
+
+        for log in filter(self.log_filter, logs):
+            request_id = log["params"]["requestId"]
+            resp_url = log["params"]["response"]["url"]
+            print(f"Caught {resp_url}")
+            print(self.driver.execute_cdp_cmd(
+                "Network.getResponseBody", {"requestId": request_id}))
+
+    def log_filter(self, log_):
+        return (
+            # is an actual response
+            log_["method"] == "Network.responseReceived"
+            # and json
+            and "json" in log_["params"]["response"]["mimeType"]
+        )
+
     def check_vac(self, center):
+        self.open_browser()
         # Make more undetectable
         self.driver.execute_script(
             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-
+        self.driver.get(center["URL"])
+        time.sleep(10)
         start_url = center["URL"]+"impftermine/service?plz="+center["PLZ"]
 
         self.driver.get(start_url)
@@ -82,28 +119,43 @@ class ChromeChecker:
         print("Clicked on 'No' button")
 
         vaccine_available = False
+        output = -1
         try:
             element = self.wait.until(
                 EC.presence_of_element_located((By.XPATH, '//div[contains(@class, "alert-danger")]')))
             vaccine_available = not ('keine freien Termine' in element.text)
             print(colored("[Page]", "yellow"), "\t", element.text)
-
+            # self.print_logs()
+            self.driver.save_screenshot(
+                "images/"+center["PLZ"]+"-"+str(datetime.datetime.now())+".png")
             if "Gehören Sie einer impfberechtigten Personengruppen an?" in self.driver.page_source:
-                return 7
+                output = 7
             if "Bitte geben Sie Ihr Alter ein" in self.driver.page_source:
-                return 8
+                output = 8
             if "impfberechtigten" in self.driver.page_source:
-                return 9
+                output = 9
 
         except TimeoutException:
             print(colored("Maybe vaccine available", "magenta"))
-            return 5
+            output = 5
+        self.driver.get(center["URL"]+"rest/suche/termincheck?plz=" +
+                        center["PLZ"]+"&leistungsmerkmale=L920,L921,L922,L923")
+        time.sleep(15)
+        rest = self.driver.page_source
+        f = open("images/"+center["PLZ"]+"-" +
+                 str(datetime.datetime.now())+".txt", "w")
+        f.write(rest)
+        f.close()
 
-        self.driver.save_screenshot("4.png")
+        self.close_browser()
+
+        if "{}" in rest:
+            return -1
 
         print("Vaccine available:", vaccine_available)
+        if output != -1:
+            return output
 
-        output = -1
         if vaccine_available:
             output = 6
             print(colored("Vaccine available", "green"))

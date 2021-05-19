@@ -1,4 +1,6 @@
 import time
+
+from termcolor import colored
 import tor
 import datetime
 import pytz
@@ -19,6 +21,12 @@ def checker_thread(port, center, prometheus_metric, terminator):
         while True:
 
             output = checker.check_vac(center)
+            if output<0:
+                print(colored("[Error]: ","red")+"Shaddow banned")
+                print("Sleeping for 10 min")
+                time.sleep(60*5)
+                continue
+
             if output > 4:
                 message = "Impfstoff verfügbar in: " + \
                     center["Zentrumsname"]+"\n"
@@ -30,7 +38,7 @@ def checker_thread(port, center, prometheus_metric, terminator):
                 zentrum=get_station_label(center)).set(output)
             update_time_metric(prometheus_metric[1], get_station_label(center))
 
-            time.sleep(15)
+            time.sleep(180)
     except:
         traceback.print_exc()
         terminator()
